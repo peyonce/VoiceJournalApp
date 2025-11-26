@@ -55,6 +55,15 @@ export default function RecordingScreen() {
       const audioPath = await AudioService.stopRecording();
       console.log('Audio path received:', audioPath);
       
+      // TEST: Try to play immediately while blob is still valid
+      console.log('Testing immediate playback...');
+      try {
+        await AudioService.playAudio(audioPath);
+        console.log('Immediate playback test successful');
+      } catch (playError) {
+        console.log('Immediate playback failed (expected for web):', playError);
+      }
+      
       const voiceNote = {
         id: Date.now().toString(),
         filename: `Recording_${new Date().toLocaleDateString()}`,

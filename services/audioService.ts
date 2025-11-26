@@ -54,7 +54,16 @@ class AudioService {
       }
 
       console.log('Recording stopped, URI:', uri);
-      return uri;
+      
+      // For web, we need to handle the blob URL immediately
+      let finalUri = uri;
+      if (uri.startsWith('blob:')) {
+        console.log('Web environment detected, handling blob URL...');
+        // On web, we'll use the blob URL directly but play it immediately
+        // The issue is blob URLs expire, so we need to handle playback differently
+      }
+      
+      return finalUri;
     } catch (error) {
       console.error('Failed to stop recording:', error);
       throw error;
@@ -65,6 +74,12 @@ class AudioService {
     try {
       console.log('Playing audio from URI:', uri);
       
+      // For web blob URLs, we need a different approach
+      if (uri.startsWith('blob:')) {
+        await this.playWebAudio(uri);
+        return;
+      }
+
       // Stop any currently playing sound
       if (this.sound) {
         await this.sound.unloadAsync();
@@ -101,6 +116,57 @@ class AudioService {
       console.error('Failed to play audio:', error);
       throw error;
     }
+  }
+
+  // Special method for web audio playback
+  async playWebAudio(blobUrl: string) {
+    try {
+      console.log('Using web audio API for playback...');
+      
+      // Create an audio element for web playback
+      const audio = new Audio(blobUrl);
+      
+      audio.oncanplaythrough = () => {
+        console.log('Web audio ready to play');
+        audio.play().then(() => {
+          console.log('Web audio playback started');
+        }).catch((error) => {
+          console.error('Web audio play failed:', error);
+          throw error;
+        });
+      };
+
+      audio.onerror = (error) => {
+        console.error('Web audio error:', error);
+        throw new Error('Web audio playback failed');
+      };
+
+      // Load the audio
+      audio.load();
+
+    } catch (error) {
+      console.error('Web audio playback failed:', error);
+      throw error;
+    }
+  }
+
+  // Alternative method: Convert blob to base64 for permanent storage
+  async blobToBase64(blobUrl: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function() {
+        const reader = new FileReader();
+        reader.onloadend = function() {
+          resolve(reader.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(xhr.response);
+      };
+      xhr.onerror = reject;
+      xhr.open('GET', blobUrl);
+      xhr.responseType = 'blob';
+      xhr.send();
+    });
   }
 }
 
