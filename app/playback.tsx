@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator
-} from 'react-native';
+import { ThemedView } from '@/components/themed-view';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ThemedView } from '@/components/themed-view';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import AudioService from '../services/audioService';
-import { VoiceNote } from '../types';
 import { styles } from '../styles/globalStyles';
+import { VoiceNote } from '../types';
 import { formatTime } from '../utils/helpers';
 
 export default function PlaybackScreen() {
@@ -28,6 +28,8 @@ export default function PlaybackScreen() {
         const note = JSON.parse(params.voiceNote as string);
         setVoiceNote(note);
         console.log('Playback screen loaded note:', note);
+        console.log('Audio filepath:', note.filepath);
+        console.log('All note properties:', Object.keys(note));
       } catch (error) {
         const errorMsg = 'Error parsing voice note: ' + error;
         setError(errorMsg);
@@ -43,7 +45,8 @@ export default function PlaybackScreen() {
     try {
       setError('');
       setIsLoading(true);
-      console.log('Attempting to play audio:', voiceNote.filepath);
+      console.log('Attempting to play audio with filepath:', voiceNote.filepath);
+      console.log('Full voiceNote object:', voiceNote);
       
       await AudioService.playAudio(voiceNote.filepath);
       setIsPlaying(true);
@@ -75,9 +78,10 @@ export default function PlaybackScreen() {
         <Text style={styles.noteDate}>{voiceNote.date}</Text>
         <Text style={styles.noteDate}>Duration: {formatTime(voiceNote.duration)}</Text>
         <Text style={styles.noteDate}>ID: {voiceNote.id}</Text>
+        <Text style={styles.noteDate}>Filepath: {voiceNote.filepath}</Text>
       </View>
 
-      {/* Error Display */}
+       
       {error ? (
         <View style={{ backgroundColor: '#FFE6E6', padding: 10, borderRadius: 5, marginBottom: 20 }}>
           <Text style={{ color: '#FF3B30', textAlign: 'center' }}>Error: {error}</Text>

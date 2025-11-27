@@ -1,43 +1,31 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VoiceNote } from '../types';
 
-const STORAGE_KEYS = {
-  VOICE_NOTES: '@voice_notes',
-};
+const STORAGE_KEY = '@voice_notes';
 
 class StorageService {
-  async saveVoiceNote(voiceNote: VoiceNote): Promise<boolean> {
-    try {
-      const existingNotes = await this.getVoiceNotes();
-      const updatedNotes = [...existingNotes, voiceNote];
-      await AsyncStorage.setItem(STORAGE_KEYS.VOICE_NOTES, JSON.stringify(updatedNotes));
-      return true;
-    } catch (error) {
-      console.error('Error saving voice note:', error);
-      throw error;
-    }
+  async saveVoiceNote(voiceNote: VoiceNote): Promise<void> {
+    const existing = await this.getVoiceNotes();
+    const updated = [...existing, voiceNote];
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }
 
   async getVoiceNotes(): Promise<VoiceNote[]> {
-    try {
-      const notes = await AsyncStorage.getItem(STORAGE_KEYS.VOICE_NOTES);
-      return notes ? JSON.parse(notes) : [];
-    } catch (error) {
-      console.error('Error getting voice notes:', error);
-      return [];
-    }
+    const notes = await AsyncStorage.getItem(STORAGE_KEY);
+    return notes ? JSON.parse(notes) : [];
   }
 
-  async deleteVoiceNote(id: string): Promise<boolean> {
-    try {
-      const existingNotes = await this.getVoiceNotes();
-      const updatedNotes = existingNotes.filter(note => note.id !== id);
-      await AsyncStorage.setItem(STORAGE_KEYS.VOICE_NOTES, JSON.stringify(updatedNotes));
-      return true;
-    } catch (error) {
-      console.error('Error deleting voice note:', error);
-      throw error;
-    }
+  async deleteVoiceNote(id: string): Promise<void> {
+    const existing = await this.getVoiceNotes();
+    const updated = existing.filter(note => note.id !== id);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  }
+
+  async searchVoiceNotes(query: string): Promise<VoiceNote[]> {
+    const notes = await this.getVoiceNotes();
+    return notes.filter(note => 
+      note.filename.toLowerCase().includes(query.toLowerCase())
+    );
   }
 }
 

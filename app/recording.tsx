@@ -1,48 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
 import AudioService from '../services/audioService';
 import StorageService from '../services/storageService';
-import { styles } from '../styles/globalStyles';
-import { formatTime } from '../utils/helpers';
 
 export default function RecordingScreen() {
   const router = useRouter();
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    let interval: any;
-    if (isRecording) {
-      interval = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isRecording]);
 
   const startRecording = async () => {
     try {
-      console.log('=== STARTING RECORDING ===');
       setIsLoading(true);
       await AudioService.startRecording();
       setIsRecording(true);
-      setRecordingTime(0);
-      console.log('=== RECORDING STARTED ===');
+      Alert.alert('Recording Started', 'Speak now - your voice is being recorded');
     } catch (error) {
-      console.error('START RECORDING ERROR:', error);
-      Alert.alert('Error', 'Failed to start recording');
+      Alert.alert('Error', 'Failed to access microphone');
     } finally {
       setIsLoading(false);
     }
@@ -50,38 +25,23 @@ export default function RecordingScreen() {
 
   const stopRecording = async () => {
     try {
-      console.log('=== STOPPING RECORDING ===');
       setIsLoading(true);
-      const audioPath = await AudioService.stopRecording();
-      console.log('Audio path received:', audioPath);
-      
-      // TEST: Try to play immediately while blob is still valid
-      console.log('Testing immediate playback...');
-      try {
-        await AudioService.playAudio(audioPath);
-        console.log('Immediate playback test successful');
-      } catch (playError) {
-        console.log('Immediate playback failed (expected for web):', playError);
-      }
+      const result = await AudioService.stopRecording();
       
       const voiceNote = {
         id: Date.now().toString(),
-        filename: `Recording_${new Date().toLocaleDateString()}`,
-        filepath: audioPath,
+        filename: result.filename,
+        filepath: result.filepath,
         date: new Date().toLocaleString(),
-        duration: recordingTime
+        duration: result.duration
       };
 
-      console.log('Saving voice note:', voiceNote);
       await StorageService.saveVoiceNote(voiceNote);
-      console.log('=== RECORDING SAVED SUCCESSFULLY ===');
-      
       setIsRecording(false);
-      setRecordingTime(0);
       
-      router.back();
+      Alert.alert('Success', `"${voiceNote.filename}" saved successfully!`);
+      
     } catch (error) {
-      console.error('STOP RECORDING ERROR:', error);
       Alert.alert('Error', 'Failed to save recording');
     } finally {
       setIsLoading(false);
@@ -89,37 +49,40 @@ export default function RecordingScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.recordingContainer}>
-        <Text style={styles.recordingTime}>
-          {formatTime(recordingTime)}
-        </Text>
-        <Text style={styles.recordingStatus}>
-          {isRecording ? 'Recording...' : 'Ready to record'}
-        </Text>
-      </View>
+    <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>
+        {isRecording ? '🔴 Recording...' : 'Voice Recorder'}
+      </Text>
+      <Text style={{ color: '#666', marginBottom: 30, textAlign: 'center' }}>
+        {isRecording ? 'Speak into your microphone' : 'Tap below to start recording'}
+      </Text>
 
       {isLoading ? (
         <ActivityIndicator size="large" color="#007AFF" />
       ) : (
         <TouchableOpacity
-          style={[
-            styles.recordButton,
-            isRecording && styles.recordButtonActive
-          ]}
+          style={{ 
+            backgroundColor: isRecording ? '#FF3B30' : '#007AFF', 
+            padding: 20, 
+            borderRadius: 50, 
+            width: 200, 
+            alignItems: 'center',
+            elevation: 5,
+          }}
           onPress={isRecording ? stopRecording : startRecording}
         >
-          <MaterialIcons
-            name={isRecording ? 'stop' : 'mic'}
-            size={32}
-            color="white"
-          />
+          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>
+            {isRecording ? 'Stop Recording' : 'Start Recording'}
+          </Text>
         </TouchableOpacity>
       )}
 
-      <Text style={styles.recordingHint}>
-        {isRecording ? 'Tap to stop recording' : 'Tap to start recording'}
-      </Text>
+      <TouchableOpacity
+        style={{ backgroundColor: '#666', padding: 15, borderRadius: 10, marginTop: 30, width: 200, alignItems: 'center' }}
+        onPress={() => router.back()}
+      >
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>Back to Home</Text>
+      </TouchableOpacity>
     </ThemedView>
   );
 }
